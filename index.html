@@ -3,101 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color Summarizer Tool (Single TSV Download)</title>
+    <title>Color Summarizer Tool</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        textarea, select, input { width: 100%; margin-bottom: 10px; }
-        button { margin-top: 10px; }
-        #debug, #results { margin-top: 20px; white-space: pre-wrap; font-family: monospace; }
+        body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { color: #333; }
+        .info-box { background: #e3f2fd; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .info-box h3 { margin-top: 0; color: #1976d2; }
+        .info-box ul { margin: 10px 0; padding-left: 20px; }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        textarea, select, input[type="text"] { width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        textarea { font-family: monospace; }
+        button { margin-top: 10px; padding: 12px 24px; background: #1976d2; color: white; border: none; cursor: pointer; border-radius: 4px; font-size: 16px; }
+        button:hover { background: #1565c0; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .checkbox-group { margin: 15px 0; }
+        .checkbox-group label { display: inline-block; margin-right: 20px; font-weight: normal; }
+        #results { margin-top: 20px; }
+        .progress { padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; margin: 10px 0; }
+        .success { padding: 10px; background: #d4edda; border-left: 4px solid #28a745; margin: 10px 0; color: #155724; }
+        .error { padding: 10px; background: #f8d7da; border-left: 4px solid #dc3545; margin: 10px 0; color: #721c24; }
+        .warning { padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; margin: 10px 0; color: #856404; }
+        .image-result { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .image-result h4 { margin: 0 0 10px 0; color: #333; }
+        .summary { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; }
+        #debug { margin-top: 20px; padding: 10px; background: #f5f5f5; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; }
     </style>
 </head>
 <body>
-    <h1>Batch Image Color Summarizer</h1>
-
-    <p>Note: You may need to <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank">request temporary access</a> to the CORS Anywhere demo server before using this tool.</p>
-    <textarea id="imageUrl" rows="3" placeholder="Enter image URL here (one per line)"></textarea>
+    <h1>Batch Color Summarizer Tool</h1>
+    
+    <div class="info-box">
+        <h3>Image URL Requirements</h3>
+        <ul>
+            <li><strong>Must be full direct image links</strong> (ending in .jpg, .jpeg, .png, only)</li>
+            <li><strong>Must be publicly accessible</strong> (no authentication required)</li>
+            <li><strong>Use HTTPS</strong> when possible for better compatibility</li>
+        </ul>
+        <p><strong>examples:</strong></p>
+        <ul>
+            <li>https://i.imgur.com/example.jpg</li>
+            <li>https://example.com/photos/image.png</li>
+        </ul>
+    </div>
+    
+    <label for="workerUrl">Cloudflare Worker URL:</label>
+    <input type="text" id="workerUrl" placeholder="https://color-summarizer-proxy.snowy-shadow-118c.workers.dev/" value="">
+    
+    <label for="imageUrl">Image URLs (one per line):</label>
+    <textarea id="imageUrl" rows="6" placeholder="https://example.com/image1.jpg
+https://example.com/image2.jpg
+https://example.com/image3.png"></textarea>
+    
+    <label for="precision">Analysis Precision:</label>
     <select id="precision">
-        <option value="vlow">Very Low (50px)</option>
-        <option value="low">Low (75px)</option>
-        <option value="medium" selected>Medium (100px)</option>
-        <option value="high">High (150px)</option>
-        <option value="vhigh">Very High (200px)</option>
+        <option value="vlow">Very Low (50px) - Fastest</option>
+        <option value="low">Low (75px) - Fast</option>
+        <option value="medium" selected>Medium (100px) - Balanced</option>
+        <option value="high">High (150px) - Detailed</option>
+        <option value="vhigh">Very High (200px) - Most Detailed</option>
     </select>
+    
+    <label for="numClusters">Number of Color Clusters:</label>
     <select id="numClusters">
         <option value="0">No clustering</option>
         <option value="2">2 clusters</option>
         <option value="3">3 clusters</option>
         <option value="4">4 clusters</option>
         <option value="5" selected>5 clusters</option>
+        <option value="6">6 clusters</option>
+        <option value="7">7 clusters</option>
+        <option value="8">8 clusters</option>
+        <option value="9">9 clusters</option>
         <option value="10">10 clusters</option>
+        <option value="11">11 clusters</option>
+        <option value="12">12 clusters</option>
+        <option value="13">13 clusters</option>
+        <option value="14">14 clusters</option>
         <option value="15">15 clusters</option>
         <option value="20">20 clusters</option>
     </select>
-    <p></p><label><input type="checkbox" id="includeHistogram"> Include Histogram</label>
-
-    <label><input type="checkbox" id="includePixel"> Include Pixel Data</label>
-<p></p>
-    <button onclick="analyzeImages()">Analyze Images and Download TSV file</button>
-<p>Credit: this batch processing tool accesses the <a href="https://mk.bcgsc.ca/color-summarizer/?api">Image Color Summarizer API</a>, created by <a href=" https://mk.bcgsc.ca/"> Martin Krzywinski </a>. This tool was created for educational instruction purposes by <a href="https://jcinnamon.github.io/">Jonathan Cinnamon</a>, 2024.</p>
-    <div id="debug"></div>
+    
+    <div class="checkbox-group">
+        <label><input type="checkbox" id="includeHistogram"> Include Histogram Data</label>
+        <label><input type="checkbox" id="includePixel"> Include Pixel Data</label>
+    </div>
+    
+    <button id="analyzeBtn" onclick="analyzeImages()">🚀 Analyze Images and Download TSV</button>
+    
     <div id="results"></div>
-
+    <div id="debug"></div>
+<p>Credit: this batch processing tool accesses the <a href="https://mk.bcgsc.ca/color-summarizer/?api">Image Color Summarizer API</a>, created by <a href=" https://mk.bcgsc.ca/"> Martin Krzywinski </a>. This tool was created for educational instruction purposes by <a href="https://jcinnamon.github.io/">Jonathan Cinnamon</a>, 2026.</p>
     <script>
-        const corsProxy = 'https://cors-anywhere.herokuapp.com/';
-        const apiUrl = 'https://mkweb.bcgsc.ca/color-summarizer/';
-
         async function analyzeImages() {
-            const imageUrls = document.getElementById('imageUrl').value.trim().split('\n');
-            const debugDiv = document.getElementById('debug');
+            const workerUrl = document.getElementById('workerUrl').value.trim();
+            const imageUrls = document.getElementById('imageUrl').value.trim().split('\n').filter(url => url.trim());
             const resultsDiv = document.getElementById('results');
-            debugDiv.innerHTML = 'Analyzing...';
+            const debugDiv = document.getElementById('debug');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            
+            // Clear previous results
             resultsDiv.innerHTML = '';
+            debugDiv.innerHTML = '';
+            
+            // Validation
+            if (!workerUrl) {
+                resultsDiv.innerHTML = '<div class="error">❌ Please enter your Cloudflare Worker URL</div>';
+                return;
+            }
+            
+            if (imageUrls.length === 0) {
+                resultsDiv.innerHTML = '<div class="error">❌ Please enter at least one image URL</div>';
+                return;
+            }
+            
+            // Validate URLs
+            const invalidUrls = [];
+            const validUrls = [];
+            
+            imageUrls.forEach(url => {
+                if (!isValidImageUrl(url)) {
+                    invalidUrls.push(url);
+                } else {
+                    validUrls.push(url);
+                }
+            });
+            
+            if (invalidUrls.length > 0) {
+                resultsDiv.innerHTML += `<div class="warning">⚠️ Warning: ${invalidUrls.length} URL(s) may not be valid image links:<ul>`;
+                invalidUrls.forEach(url => {
+                    resultsDiv.innerHTML += `<li>${escapeHtml(url)}</li>`;
+                });
+                resultsDiv.innerHTML += '</ul>These will still be attempted, but may fail.</div>';
+            }
+            
+            if (validUrls.length === 0) {
+                resultsDiv.innerHTML += '<div class="error">❌ No valid image URLs found. Please check your URLs.</div>';
+                return;
+            }
+            
+            analyzeBtn.disabled = true;
+            debugDiv.innerHTML = 'Starting analysis...\n';
 
             const blobParts = [];
             let isFirstImage = true;
+            let successCount = 0;
+            let failCount = 0;
+            const errors = [];
 
             for (let i = 0; i < imageUrls.length; i++) {
+                const url = imageUrls[i].trim();
                 try {
-                    const result = await analyzeImage(imageUrls[i]);
-                    const processedResult = processResult(result, imageUrls[i], isFirstImage);
+                    resultsDiv.innerHTML = `<div class="progress">⏳ Analyzing image ${i + 1} of ${imageUrls.length}...<br>URL: ${escapeHtml(url)}</div>`;
+                    debugDiv.innerHTML += `\n[${i + 1}/${imageUrls.length}] Requesting: ${url}\n`;
+                    
+                    const result = await analyzeImage(workerUrl, url);
+                    
+                    // Check if result contains an error message
+                    if (result.includes('*** ERROR ***')) {
+                        const errorMsg = extractErrorMessage(result);
+                        throw new Error(errorMsg || 'API returned an error');
+                    }
+                    
+                    const processedResult = processResult(result, url, isFirstImage);
                     blobParts.push(processedResult);
-                    resultsDiv.innerHTML += `Analyzed: ${imageUrls[i]}<br>`;
+                    successCount++;
                     isFirstImage = false;
+                    
+                    debugDiv.innerHTML += `✓ Success\n`;
                 } catch (error) {
+                    failCount++;
+                    const errorMsg = error.message || 'Unknown error';
+                    errors.push({url: url, error: errorMsg});
+                    debugDiv.innerHTML += `✗ Error: ${errorMsg}\n`;
                     console.error('Error details:', error);
-                    resultsDiv.innerHTML += `Error analyzing ${imageUrls[i]}: ${error.message}<br>`;
                 }
             }
+
+            // Display summary
+            resultsDiv.innerHTML = '<div class="summary"><h3>Analysis Complete</h3>';
+            
+            if (successCount > 0) {
+                resultsDiv.innerHTML += `<div class="success">✓ Successfully analyzed: ${successCount} image(s)</div>`;
+            }
+            
+            if (failCount > 0) {
+                resultsDiv.innerHTML += `<div class="error">✗ Failed: ${failCount} image(s)</div>`;
+                resultsDiv.innerHTML += '<h4>Error Details:</h4>';
+                errors.forEach(e => {
+                    resultsDiv.innerHTML += `<div class="image-result">`;
+                    resultsDiv.innerHTML += `<h4>❌ ${escapeHtml(e.url)}</h4>`;
+                    resultsDiv.innerHTML += `<p><strong>Error:</strong> ${escapeHtml(e.error)}</p>`;
+                    resultsDiv.innerHTML += getSuggestions(e.error);
+                    resultsDiv.innerHTML += `</div>`;
+                });
+            }
+            
+            resultsDiv.innerHTML += '</div>';
 
             if (blobParts.length > 0) {
                 const blob = new Blob(blobParts, { type: 'text/tab-separated-values' });
                 downloadTSV(blob, 'color_summary_all.tsv');
-                debugDiv.innerHTML = 'Analysis complete. TSV file downloaded.';
+                resultsDiv.innerHTML += '<div class="success">📥 TSV file downloaded successfully!</div>';
             } else {
-                debugDiv.innerHTML = 'No successful analyses to download.';
+                resultsDiv.innerHTML += '<div class="error">❌ No data to download. All analyses failed.</div>';
+            }
+            
+            analyzeBtn.disabled = false;
+        }
+
+        function isValidImageUrl(url) {
+            try {
+                const urlObj = new URL(url);
+                const path = urlObj.pathname.toLowerCase();
+                return path.match(/\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i) !== null;
+            } catch (e) {
+                return false;
             }
         }
 
-        async function analyzeImage(imageUrl) {
+        function extractErrorMessage(result) {
+            const match = result.match(/\*\*\* ERROR \*\*\*\s*(.*?)(?:\n|$)/);
+            if (match) {
+                return match[1].trim();
+            }
+            return null;
+        }
+
+        function getSuggestions(errorMsg) {
+            let suggestions = '<div style="margin-top: 10px;"><strong>Suggestions:</strong><ul>';
+            
+            if (errorMsg.includes('does not point to an image')) {
+                suggestions += '<li>Ensure the URL is a direct link to an image file (ending in .jpg, .png, etc.)</li>';
+                suggestions += '<li>Right-click the image and select "Copy Image Address" to get the direct URL</li>';
+                suggestions += '<li>Avoid URLs that point to web pages containing images</li>';
+            } else if (errorMsg.includes('HTTP error')) {
+                suggestions += '<li>Check that the image URL is publicly accessible</li>';
+                suggestions += '<li>Verify the URL is correct and the image still exists</li>';
+                suggestions += '<li>Try accessing the URL directly in your browser</li>';
+            } else if (errorMsg.includes('Failed to fetch')) {
+                suggestions += '<li>Check your internet connection</li>';
+                suggestions += '<li>Verify your Cloudflare Worker URL is correct</li>';
+                suggestions += '<li>Ensure the Cloudflare Worker is deployed and running</li>';
+            } else {
+                suggestions += '<li>Verify the image URL is publicly accessible</li>';
+                suggestions += '<li>Check that the URL points to a valid image file</li>';
+                suggestions += '<li>Try a different image to rule out API issues</li>';
+            }
+            
+            suggestions += '</ul></div>';
+            return suggestions;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function analyzeImage(workerUrl, imageUrl) {
             const params = new URLSearchParams({
                 url: imageUrl,
                 precision: document.getElementById('precision').value,
                 num_clusters: document.getElementById('numClusters').value,
-                text: '1',
-                tab: '1',
                 histogram: document.getElementById('includeHistogram').checked ? '1' : '0',
                 pixel: document.getElementById('includePixel').checked ? '1' : '0'
             });
 
-            const fullUrl = `${corsProxy}${apiUrl}?${params}`;
-            document.getElementById('debug').innerHTML += `Requesting: ${fullUrl}\n\n`;
+            const fullUrl = `${workerUrl}?${params}`;
 
             const response = await fetch(fullUrl);
+            const text = await response.text();
+            
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP error! status: ${response.status} - ${text}`);
             }
             
-            return await response.text();
+            return text;
         }
 
         function processResult(result, imageUrl, isFirstImage) {
@@ -108,7 +289,7 @@
                 output += 'Image URL\t' + lines[0] + '\n';
             }
 
-            output += lines.slice(1).map(line => `${imageUrl}\t${line}`).join('\n') + '\n';
+            output += lines.slice(1).filter(line => line.trim()).map(line => `${imageUrl}\t${line}`).join('\n') + '\n';
             return output;
         }
 
@@ -125,4 +306,3 @@
     </script>
 </body>
 </html>
-
