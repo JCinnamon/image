@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color Summarizer Tool</title>
+    <title>Batch Image Color Summarizer</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
         h1 { color: #333; }
@@ -30,24 +30,22 @@
     </style>
 </head>
 <body>
-    <h1>Batch Color Summarizer Tool</h1>
+    <h1> Batch Image Color Summarizer Tool</h1>
     
     <div class="info-box">
         <h3>Image URL Requirements</h3>
         <ul>
-            <li><strong>Must be full direct image links</strong> (ending in .jpg, .jpeg, .png, only)</li>
+            <li><strong>Must be direct image links</strong> (ending in .jpg, .jpeg, or .png, only.)</li>
             <li><strong>Must be publicly accessible</strong> (no authentication required)</li>
             <li><strong>Use HTTPS</strong> when possible for better compatibility</li>
         </ul>
-        <p><strong>examples:</strong></p>
+        <p><strong>Examples:</strong></p>
         <ul>
             <li>https://i.imgur.com/example.jpg</li>
             <li>https://example.com/photos/image.png</li>
         </ul>
+        
     </div>
-    
-    <label for="workerUrl">Cloudflare Worker URL:</label>
-    <input type="text" id="workerUrl" placeholder="https://color-summarizer-proxy.snowy-shadow-118c.workers.dev/" value="">
     
     <label for="imageUrl">Image URLs (one per line):</label>
     <textarea id="imageUrl" rows="6" placeholder="https://example.com/image1.jpg
@@ -88,14 +86,17 @@ https://example.com/image3.png"></textarea>
         <label><input type="checkbox" id="includePixel"> Include Pixel Data</label>
     </div>
     
-    <button id="analyzeBtn" onclick="analyzeImages()">🚀 Analyze Images and Download TSV</button>
+    <button id="analyzeBtn" onclick="analyzeImages()">🚀 Analyze Images and Download Data</button>
     
     <div id="results"></div>
     <div id="debug"></div>
-<p>Credit: this batch processing tool accesses the <a href="https://mk.bcgsc.ca/color-summarizer/?api">Image Color Summarizer API</a>, created by <a href=" https://mk.bcgsc.ca/"> Martin Krzywinski </a>. This tool was created for educational instruction purposes by <a href="https://jcinnamon.github.io/">Jonathan Cinnamon</a>, 2026.</p>
+    <p>Credit: this batch processing tool accesses the <a href="https://mk.bcgsc.ca/color-summarizer/?api">Image Color Summarizer API</a>, created by <a href=" https://mk.bcgsc.ca/"> Martin Krzywinski </a>. This tool was created for educational instruction purposes by <a href="https://jcinnamon.github.io/">Jonathan Cinnamon</a>, 2024.</p>
+
     <script>
+        // Cloudflare Worker URL - hardcoded
+        const WORKER_URL = 'https://color-summarizer-proxy.snowy-shadow-118c.workers.dev';
+        
         async function analyzeImages() {
-            const workerUrl = document.getElementById('workerUrl').value.trim();
             const imageUrls = document.getElementById('imageUrl').value.trim().split('\n').filter(url => url.trim());
             const resultsDiv = document.getElementById('results');
             const debugDiv = document.getElementById('debug');
@@ -106,11 +107,6 @@ https://example.com/image3.png"></textarea>
             debugDiv.innerHTML = '';
             
             // Validation
-            if (!workerUrl) {
-                resultsDiv.innerHTML = '<div class="error">❌ Please enter your Cloudflare Worker URL</div>';
-                return;
-            }
-            
             if (imageUrls.length === 0) {
                 resultsDiv.innerHTML = '<div class="error">❌ Please enter at least one image URL</div>';
                 return;
@@ -156,7 +152,7 @@ https://example.com/image3.png"></textarea>
                     resultsDiv.innerHTML = `<div class="progress">⏳ Analyzing image ${i + 1} of ${imageUrls.length}...<br>URL: ${escapeHtml(url)}</div>`;
                     debugDiv.innerHTML += `\n[${i + 1}/${imageUrls.length}] Requesting: ${url}\n`;
                     
-                    const result = await analyzeImage(workerUrl, url);
+                    const result = await analyzeImage(url);
                     
                     // Check if result contains an error message
                     if (result.includes('*** ERROR ***')) {
@@ -242,8 +238,8 @@ https://example.com/image3.png"></textarea>
                 suggestions += '<li>Try accessing the URL directly in your browser</li>';
             } else if (errorMsg.includes('Failed to fetch')) {
                 suggestions += '<li>Check your internet connection</li>';
-                suggestions += '<li>Verify your Cloudflare Worker URL is correct</li>';
-                suggestions += '<li>Ensure the Cloudflare Worker is deployed and running</li>';
+                suggestions += '<li>The Color Summarizer API may be temporarily unavailable</li>';
+                suggestions += '<li>Try again in a few moments</li>';
             } else {
                 suggestions += '<li>Verify the image URL is publicly accessible</li>';
                 suggestions += '<li>Check that the URL points to a valid image file</li>';
@@ -260,7 +256,7 @@ https://example.com/image3.png"></textarea>
             return div.innerHTML;
         }
 
-        async function analyzeImage(workerUrl, imageUrl) {
+        async function analyzeImage(imageUrl) {
             const params = new URLSearchParams({
                 url: imageUrl,
                 precision: document.getElementById('precision').value,
@@ -269,7 +265,7 @@ https://example.com/image3.png"></textarea>
                 pixel: document.getElementById('includePixel').checked ? '1' : '0'
             });
 
-            const fullUrl = `${workerUrl}?${params}`;
+            const fullUrl = `${WORKER_URL}?${params}`;
 
             const response = await fetch(fullUrl);
             const text = await response.text();
